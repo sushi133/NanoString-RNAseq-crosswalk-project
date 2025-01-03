@@ -27,15 +27,20 @@ platform2_pre = np.dot(platform1_pre, np.diag(true_coefficients)) + noise
 # Clip negative values for realistic counts
 platform2_pre = np.clip(platform2_pre, 0, None)
 
-# Generate a correlated post-treatment data (using multivariate normal distribution)
-# Define the covariance matrix between pre and post treatment values
-cov_matrix = np.array([[1, correlation], [correlation, 1]])  # Correlation between pre and post-treatment data
-mean_pre_post = np.zeros(2)  # Zero mean for both pre and post-treatment
-pre_post_data = np.random.multivariate_normal(mean_pre_post, cov_matrix, size=(n_patients, n_genes))
+# Generate correlated pre-treatment and post-treatment data for each gene
+pre_treatment = np.column_stack([platform1_pre, platform2_pre])
 
-# Separate pre-treatment and post-treatment data
-platform1_post = platform1_pre * (1 + pre_post_data[:, 0])  # Scale post-treatment by correlation
-platform2_post = platform2_pre * (1 + pre_post_data[:, 1])  # Scale post-treatment by correlation
+# Initialize matrix for post-treatment data
+post_treatment = np.zeros_like(pre_treatment)
+
+# Create correlation matrix for each gene
+for i in range(n_genes):
+    # Generate correlated post-treatment data based on pre-treatment
+    post_treatment[:, i] = pre_treatment[:, i] * (1 + np.random.normal(0, correlation, n_patients))
+
+# Split pre-treatment and post-treatment data
+platform1_post = post_treatment[:, :n_genes]  # First half for platform1 post-treatment
+platform2_post = post_treatment[:, n_genes:]  # Second half for platform2 post-treatment
 
 # Clip negative values for post-treatment counts
 platform1_post = np.clip(platform1_post, 0, None)
