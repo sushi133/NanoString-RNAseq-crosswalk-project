@@ -1,25 +1,9 @@
-This script simulates genomic count data for a set of patients, with a focus on pre-treatment and post-treatment measurements across two platforms. The goal is to evaluate the performance of two machine learning models—Lasso regression and XGBoost—on predicting post-treatment data based on pre-treatment data, and to compare their prediction accuracy.
+This script simulates genomic count data with pre-treatment and post-treatment measurements on two platforms. It compares the performance of Lasso regression and XGBoost models in predicting data from a new platform (Platform 2) based on both pre-treatment and post-treatment data from an original platform (Platform 1).
 
-Key steps in the code include:
+Key steps:
 
-Data Simulation:
-
-Simulates genomic data for n_patients (100) and n_genes (1000) using Poisson and linear transformations.
-Introduces a correlation between pre-treatment and post-treatment data.
-Prepares both Platform 1 and Platform 2 data for modeling, with the latter being transformed by a linear relationship with noise.
-Data Preprocessing:
-
-Combines pre-treatment and post-treatment data into separate DataFrames for both platforms.
-Merges the data for training and testing, and splits it into train and test sets.
-Standardization:
-
-Standardizes features for Lasso regression and XGBoost models to improve model performance.
-Modeling:
-
-Lasso Regression: A regularized linear model is trained on the data, and predictions are made on the test set.
-XGBoost: A gradient boosting model is used to fit the data and make predictions on the test set.
-Performance Evaluation:
-
-The models' performance is compared using Mean Squared Error (MSE) and R-squared metrics.
-Displays true vs. predicted counts for both models to assess prediction accuracy.
-This code can be used to evaluate the performance of different regression techniques on simulated genomic count data, making it useful for exploring model performance in scenarios with noisy, correlated datasets.
+Simulates data with correlation between pre- and post-treatment values.
+Prepares and splits the data for training and testing, standardizing the features.
+Fits Lasso regression and XGBoost models to predict Platform 2 data from Platform 1.
+Compares model performance using Mean Squared Error (MSE) and R-squared, and displays true vs. predicted values.
+This code evaluates the accuracy of prediction models for transforming data from one platform to another.
