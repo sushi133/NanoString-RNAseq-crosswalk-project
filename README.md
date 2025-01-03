@@ -1,4 +1,4 @@
-This script simulates genomic count data with pre-treatment and post-treatment measurements on two platforms. It compares the performance of Lasso regression and XGBoost models in predicting data for a new platform (Platform 2) based on both pre-treatment and post-treatment data from an original platform (Platform 1).
+This script simulates genomic count data with pre-treatment and post-treatment measurements on two platforms. It compares the performance of Lasso regression and XGBoost models in predicting data from a new platform (Platform 2) based on both pre-treatment and post-treatment data from an original platform (Platform 1).
 
 Key steps:
 
