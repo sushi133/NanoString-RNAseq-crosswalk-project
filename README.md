@@ -1,6 +1,6 @@
-# Genomic Count Data Simulation and Model Comparison
+# Gene Expression Count Data Simulation and Model Comparison
 
-This script simulates genomic count data with pre-treatment and post-treatment measurements on two platforms. It compares the performance of Lasso regression and XGBoost models in predicting data from a new platform (Platform 2) based on data from an original platform (Platform 1). The simulation includes various correlations: between pre- and post-treatment values, between certain genes, and between platforms.
+This script simulates gene expression count data with pre-treatment and post-treatment measurements on two platforms. It compares the performance of Lasso regression and XGBoost models in predicting data from a new platform (Platform 2) based on data from an original platform (Platform 1). The simulation includes various correlations: between pre- and post-treatment values, between certain genes, and between platforms.
 
 # Key Steps:
 
@@ -54,4 +54,4 @@ Comparison of True vs Predicted Counts for both models.
 
 ## Objective:
 
-This code evaluates the accuracy of prediction models for transforming data from one platform (Platform 1) to another (Platform 2) based on genomic counts. 
+This code evaluates the accuracy of prediction models for transforming data from one platform (Platform 1) to another (Platform 2) based on gene expression counts. 
