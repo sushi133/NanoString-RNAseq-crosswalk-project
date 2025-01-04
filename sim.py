@@ -40,19 +40,19 @@ platform1_pre = np.clip(platform1_pre, 0, None)
 true_coefficients = np.random.normal(0, 0.5, n_genes)
 noise = np.random.normal(0, 1, size=(n_patients, n_genes))
 platform2_pre = np.dot(platform1_pre, np.diag(true_coefficients)) + noise
-
-# Clip negative values for realistic counts
 platform2_pre = np.clip(platform2_pre, 0, None)  # Ensure non-negative values
+platform2_pre = np.round(platform2_pre).astype(int)  # Convert to integers
 
 # Combine pre-treatment data for both platforms
 pre_treatment_combined = np.hstack((platform1_pre, platform2_pre))
 
-# Generate correlated data of shape (n_patients, 2*n_genes), assuming correlation applied to all features equally
+# Generate correlated data of shape (n_patients, 2*n_genes)
 correlated_data = np.random.normal(0, correlation, size=(n_patients, 2*n_genes))  # Adjust correlation strength if necessary
 
 # Apply correlation to generate post-treatment
-post_treatment = pre_treatment_combined * (1 + correlated_data)  # Adjust to match dimensions
+post_treatment = pre_treatment_combined * (1 + correlated_data)  # Apply correlation
 post_treatment = np.clip(post_treatment, 0, None)  # Ensure non-negative values
+post_treatment = np.round(post_treatment).astype(int)  # Convert to integers
 
 # Split post-treatment data for platform1 and platform2
 platform1_post = post_treatment[:, :n_genes]
@@ -83,15 +83,17 @@ X_test_scaled = scaler.transform(X_test)
 lasso = Lasso(alpha=0.1)
 lasso.fit(X_train_scaled, y_train)
 y_pred_lasso = lasso.predict(X_test_scaled)
+y_pred_lasso = np.clip(y_pred_lasso, 0, None)  # Ensure non-negative values
+y_pred_lasso = np.round(y_pred_lasso).astype(int)  # Convert to integers
 mse_lasso = mean_squared_error(y_test, y_pred_lasso)
 r2_lasso = r2_score(y_test, y_pred_lasso)
 
 # --- Gradient Boosting (XGBoost) ---
 xgb_model = XGBRegressor(n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42)
-X_train_np = X_train.to_numpy()  # or X_train.values
-y_train_np = y_train.to_numpy()  # or y_train.values
-xgb_model.fit(X_train_np, y_train_np)
+xgb_model.fit(X_train.to_numpy(), y_train.to_numpy())
 y_pred_xgb = xgb_model.predict(X_test.to_numpy())
+y_pred_xgb = np.clip(y_pred_xgb, 0, None)  # Ensure non-negative values
+y_pred_xgb = np.round(y_pred_xgb).astype(int)  # Convert to integers
 mse_xgb = mean_squared_error(y_test, y_pred_xgb)
 r2_xgb = r2_score(y_test, y_pred_xgb)
 
