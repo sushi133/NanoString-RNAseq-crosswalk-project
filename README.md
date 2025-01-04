@@ -1,12 +1,12 @@
 # Genomic Count Data Simulation and Model Comparison
 
-This script simulates genomic count data with pre-treatment and post-treatment measurements on two platforms. It compares the performance of Lasso regression and XGBoost models in predicting data from a new platform (Platform 2) based on both pre-treatment and post-treatment data from an original platform (Platform 1). The simulation includes various correlations: between pre- and post-treatment values within each platform and between certain genes across both platforms.
+This script simulates genomic count data with pre-treatment and post-treatment measurements on two platforms. It compares the performance of Lasso regression and XGBoost models in predicting data from a new platform (Platform 2) based on data from an original platform (Platform 1). The simulation includes various correlations: between pre- and post-treatment values, between certain genes, and between platforms.
 
 # Key Steps:
 
-## Simulate Data with Correlation Between Pre- and Post-Treatment Values:
+## Simulate Data:
 
-Platform 1 Pre-treatment Data: The pre-treatment data for Platform 1 is generated using the Poisson distribution with a transformation based on a correlated set of genes. A correlation matrix is created for 10 genes (out of 1000 total) to reflect higher correlations between those specific genes.
+Platform 1 Pre-treatment Data: The pre-treatment data for Platform 1 is generated using the Poisson distribution based on a correlated set of genes. A correlation matrix is created for 10 genes (out of 1000 total) to reflect higher correlations between those specific genes.
 
 Platform 2 Pre-treatment Data: Generated using a linear transformation of Platform 1 data plus noise, introducing correlation between platforms.
 
@@ -29,12 +29,6 @@ XGBoost: A gradient boosting model is used to predict Platform 2 data from Platf
 Performance is evaluated using Mean Squared Error (MSE) and R-squared (R²).
 
 The true versus predicted values for both models are displayed to visually compare the accuracy of predictions.
-
-## Handling of Correlations:
-
-The correlation between genes is explicitly considered when generating the data for Platform 1.
-
-Both the correlation between pre- and post-treatment data and the inter-platform correlation are accounted for in the simulation process.
 
 ## Dependencies:
 
@@ -59,4 +53,5 @@ R-squared (R²)
 Comparison of True vs Predicted Counts for both models.
 
 ## Objective:
-This code evaluates the accuracy of prediction models for transforming data from one platform (Platform 1) to another (Platform 2) based on genomic counts. The models are compared to assess which performs better at predicting post-treatment data. The correlation between genes, platforms, and treatment stages is key to simulating realistic genomic data.
+
+This code evaluates the accuracy of prediction models for transforming data from one platform (Platform 1) to another (Platform 2) based on genomic counts. 
