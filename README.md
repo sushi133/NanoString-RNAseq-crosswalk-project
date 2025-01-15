@@ -62,4 +62,4 @@ Comparison of True vs Predicted Counts for both models.
 
 This code evaluates the accuracy of prediction models for transforming data from one platform (Platform 1) to another (Platform 2) based on gene expression counts. 
 
-![Residual Comparison](Figure_1.png)
+![](Figure_1.png)
