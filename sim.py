@@ -5,6 +5,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBRegressor
+from scipy.stats import ks_2samp
+
 
 # Set random seed for reproducibility
 np.random.seed(42)
@@ -87,6 +89,7 @@ y_pred_lasso = np.clip(y_pred_lasso, 0, None)  # Ensure non-negative values
 y_pred_lasso = np.round(y_pred_lasso).astype(int)  # Convert to integers
 mse_lasso = mean_squared_error(y_test, y_pred_lasso)
 r2_lasso = r2_score(y_test, y_pred_lasso)
+ks_lasso = ks_2samp(y_test.to_numpy().ravel(), y_pred_lasso.ravel()).statistic
 
 # --- Gradient Boosting (XGBoost) ---
 xgb_model = XGBRegressor(n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42)
@@ -96,11 +99,12 @@ y_pred_xgb = np.clip(y_pred_xgb, 0, None)  # Ensure non-negative values
 y_pred_xgb = np.round(y_pred_xgb).astype(int)  # Convert to integers
 mse_xgb = mean_squared_error(y_test, y_pred_xgb)
 r2_xgb = r2_score(y_test, y_pred_xgb)
+ks_xgb = ks_2samp(y_test.to_numpy().ravel(), y_pred_xgb.ravel()).statistic
 
 # --- Performance Comparison ---
 print("Performance Metrics:")
-print(f"Lasso Regression - Mean Squared Error (MSE): {mse_lasso:.2f}, R-squared: {r2_lasso:.2f}")
-print(f"Gradient Boosting - Mean Squared Error (MSE): {mse_xgb:.2f}, R-squared: {r2_xgb:.2f}")
+print(f"Lasso Regression - Mean Squared Error (MSE): {mse_lasso:.2f}, R-squared: {r2_lasso:.2f}, KS Distance: {ks_lasso:.2f}")
+print(f"Gradient Boosting - Mean Squared Error (MSE): {mse_xgb:.2f}, R-squared: {r2_xgb:.2f}, KS Distance: {ks_xgb:.2f}")
 
 # Display some true vs predicted counts for Lasso Regression
 comparison_lasso = pd.DataFrame({
