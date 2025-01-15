@@ -26,7 +26,7 @@ XGBoost: A gradient boosting model is used to predict Platform 2 data from Platf
 
 ## Compare Model Performance:
 
-Performance is evaluated using Mean Squared Error (MSE) and R-squared (R²).
+Performance is evaluated using Mean Squared Error (MSE), R-squared (R²), and Kolmogorov-Smirnov (KS) Distance.
 
 The true versus predicted values for both models are displayed to visually compare the accuracy of predictions.
 
@@ -40,6 +40,8 @@ scikit-learn
 
 xgboost
 
+scipy
+
 ## Example Output:
 
 The script outputs the following:
@@ -49,6 +51,8 @@ Performance Metrics for both Lasso regression and XGBoost:
 Mean Squared Error (MSE)
 
 R-squared (R²)
+
+Kolmogorov-Smirnov (KS) Distance
 
 Comparison of True vs Predicted Counts for both models.
 
