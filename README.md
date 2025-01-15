@@ -42,6 +42,8 @@ xgboost
 
 scipy
 
+matplotlib
+
 ## Example Output:
 
 The script outputs the following:
