@@ -6,7 +6,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBRegressor
 from scipy.stats import ks_2samp
-
+import matplotlib.pyplot as plt
 
 # Set random seed for reproducibility
 np.random.seed(42)
@@ -121,3 +121,39 @@ comparison_xgb = pd.DataFrame({
 })
 print("\nComparison of True vs Predicted Counts (XGBoost):")
 print(comparison_xgb.head(10))
+
+# Create a figure with two subplots (side-by-side)
+fig, axes = plt.subplots(1, 2, figsize=(14, 6), sharey=True)
+
+# Lasso Residual Plot (Left)
+axes[0].scatter(
+    y_test.to_numpy().ravel(),
+    residuals_lasso,
+    alpha=0.5,
+    color="blue",
+    label="Lasso Residuals",
+)
+axes[0].axhline(0, color="red", linestyle="--", linewidth=1.5)
+axes[0].set_xlabel("True Counts")
+axes[0].set_ylabel("Residuals (True - Predicted)")
+axes[0].set_title("Lasso Regression Residuals")
+axes[0].legend()
+axes[0].grid(True)
+
+# XGBoost Residual Plot (Right)
+axes[1].scatter(
+    y_test.to_numpy().ravel(),
+    residuals_xgb,
+    alpha=0.5,
+    color="green",
+    label="XGBoost Residuals",
+)
+axes[1].axhline(0, color="red", linestyle="--", linewidth=1.5)
+axes[1].set_xlabel("True Counts")
+axes[1].set_title("XGBoost Residuals")
+axes[1].legend()
+axes[1].grid(True)
+
+# Adjust layout and show the plot
+plt.tight_layout()
+plt.show()
