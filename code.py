@@ -8,7 +8,7 @@ import statsmodels.formula.api as smf
 import matplotlib.pyplot as plt
 
 # Read the file
-rnaseq = pd.read_csv("RNAseq_norm_rS120filt_Adzib_1.22.25.txt", sep=" ")
+rnaseq = pd.read_csv("RNAseq_norm_nanofilt_Adzib_1.22.25.txt", sep=" ")
 nanostring = pd.read_csv("Nano_norm_James_1.22.25.txt", sep=" ")
 
 # Print first 5 lines
