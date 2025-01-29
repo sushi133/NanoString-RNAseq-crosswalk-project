@@ -56,10 +56,14 @@ df.to_csv("GB_model.csv", index=False)
 # Load the saved residuals dataset
 df = pd.read_csv("GB_model.csv")
 
-# Calculate the absolute fold change (max of True_Counts / Predict_Counts or Predict_Counts / True_Counts)
-df['Abs_Fold_Change'] = np.maximum(df['True_Counts'] / df['Predict_Counts'], df['Predict_Counts'] / df['True_Counts'])
-# Flag genes with an absolute fold change greater than 10
-df['Bad_Gene'] = df['Abs_Fold_Change'] > 10
+# Calculate fold change with conditional behavior
+df['Fold_Change'] = np.where(
+    df['Predict_Counts'] >= df['True_Counts'],
+    df['Predict_Counts'] / df['True_Counts'],
+    - (df['True_Counts'] / df['Predict_Counts'])
+)
+# Flag genes with absolute fold change greater than 10, considering both sides
+df['Bad_Gene'] = np.abs(df['Fold_Change']) > 10  # Check for absolute fold change > 10
 # Filter bad genes
 bad_genes = df[df['Bad_Gene']]
 # Save or display bad genes
@@ -69,12 +73,15 @@ print(bad_genes)
 
 # Plot the fold change against the true counts
 plt.figure(figsize=(8, 6))
-plt.scatter(df['True_Counts'], df['Abs_Fold_Change'], alpha=0.5, color="green", label="Gradient Boosting Model Performance")
-plt.axhline(10, color="red", linestyle="--", linewidth=1.5)
+# plt.scatter(df['True_Counts'], df['Fold_Change'], alpha=0.5, color="green", label="Gradient Boosting Model Performance")
+plt.scatter(df['True_Counts'], np.log2(df['Fold_Change']), alpha=0.5, color="green", label="Gradient Boosting Model Performance")
+# plt.axhline(10, color="red", linestyle="--", linewidth=1.5)  # Threshold at 10-fold change (positive)
+# plt.axhline(-10, color="red", linestyle="--", linewidth=1.5)  # Threshold at -10-fold change (negative)
 # Set x-axis to log scale
 plt.xscale("log")
 plt.xlabel("True Counts")
-plt.ylabel("Fold Change")
+plt.ylabel("Log2 Fold Change")
+# plt.ylabel("Fold Change")
 plt.title("Gradient Boosting Model Performance")
 plt.legend()
 plt.grid(True)
@@ -82,8 +89,8 @@ plt.tight_layout()
 # Show the plot
 plt.show()
 
-# Compute acceptable range based on a 10-fold change
-acceptable = (df['Abs_Fold_Change'] <= 10) 
+# Compute acceptable range based on a ±10-fold change
+acceptable = np.abs(df['Fold_Change']) <= 10  # Check if fold change is within ±10 (absolute)
 # Calculate the percentage of predictions within the acceptable range
 acceptable_percentage = acceptable.mean() * 100  # Convert to percentage
 # Print the result
