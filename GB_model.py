@@ -16,8 +16,8 @@ nanostring_long = nanostring.melt(id_vars=["Geneid"], var_name="Patient_Time", v
 rnaseq_long[['Patient', 'Time']] = rnaseq_long['Patient_Time'].str.split('_', expand=True)
 nanostring_long[['Patient', 'Time']] = nanostring_long['Patient_Time'].str.split('_', expand=True)
 
-# Initialize lists for residuals
-all_residuals, all_true_values = [], []
+# Initialize lists 
+all_predict_values, all_true_values, all_genes = [], [], []
 
 # Loop through each NanoString gene
 for gene in nanostring_long['Geneid'].unique():
@@ -43,36 +43,48 @@ for gene in nanostring_long['Geneid'].unique():
     # Train model and compute residuals
     model = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)
     model.fit(X_train, y_train)
-    residuals = (model.predict(X_test) - y_test) / y_test
 
-    all_residuals.extend(residuals)
+    # Store predict values with true values and gene names
+    all_predict_values.extend(model.predict(X_test))
     all_true_values.extend(y_test)
+    all_genes.extend([gene] * len(y_test))  # Store the corresponding gene 
 
 # Create DataFrame for residuals
-residuals_df = pd.DataFrame({'True_Counts': all_true_values, 'Residuals': all_residuals})
+df = pd.DataFrame({'Geneid': all_genes, 'True_Counts': all_true_values, 'Predict_Counts': all_predict_values})
 # Save to CSV file
-residuals_df.to_csv("GB_model_residuals.csv", index=False)
+df.to_csv("GB_model.csv", index=False)
 # Load the saved residuals dataset
-residuals_df = pd.read_csv("GB_model_residuals.csv")
+df = pd.read_csv("GB_model.csv")
 
-# Create a figure for Mixed Model Residual Plot
+# Calculate the absolute fold change (max of True_Counts / Predict_Counts or Predict_Counts / True_Counts)
+df['Abs_Fold_Change'] = np.maximum(df['True_Counts'] / df['Predict_Counts'], df['Predict_Counts'] / df['True_Counts'])
+# Flag genes with an absolute fold change greater than 10
+df['Bad_Gene'] = df['Abs_Fold_Change'] > 10
+# Filter bad genes
+bad_genes = df[df['Bad_Gene']]
+# Save or display bad genes
+bad_genes.to_csv("bad_genes.csv", index=False)
+# Optionally, print out the bad genes
+print(bad_genes)
+
+# Plot the fold change against the true counts
 plt.figure(figsize=(8, 6))
-plt.scatter(residuals_df['True_Counts'], residuals_df['Residuals'], alpha=0.5, color="green", label="Gradient Boosting Model Performance")
-plt.axhline(1, color="red", linestyle="--", linewidth=1.5)
-plt.axhline(-1, color="red", linestyle="--", linewidth=1.5)
-plt.xscale("log")  # Set x-axis to log scale
-# plt.ylim(-10, 50)  # Set y-axis limits
-plt.xlabel("True Counts (Log Scale)")
-plt.ylabel("Fold Change: (Predicted - True) / True")
+plt.scatter(df['True_Counts'], df['Abs_Fold_Change'], alpha=0.5, color="green", label="Gradient Boosting Model Performance")
+plt.axhline(10, color="red", linestyle="--", linewidth=1.5)
+# Set x-axis to log scale
+plt.xscale("log")
+plt.xlabel("True Counts")
+plt.ylabel("Fold Change")
 plt.title("Gradient Boosting Model Performance")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
+# Show the plot
 plt.show()
 
-# Compute acceptable range based on a twofold change
-acceptable = (residuals_df['Residuals'] >= -1) & (residuals_df['Residuals'] <= 1)
+# Compute acceptable range based on a 10-fold change
+acceptable = (df['Abs_Fold_Change'] <= 10) 
 # Calculate the percentage of predictions within the acceptable range
 acceptable_percentage = acceptable.mean() * 100  # Convert to percentage
 # Print the result
-print(f"Percentage of predicted values within a twofold change: {acceptable_percentage:.2f}%")
+print(f"Percentage of predicted values within a 10-fold change: {acceptable_percentage:.2f}%")
