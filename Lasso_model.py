@@ -19,8 +19,8 @@ nanostring_long = nanostring.melt(id_vars=["Geneid"], var_name="Patient_Time", v
 rnaseq_long[['Patient', 'Time']] = rnaseq_long['Patient_Time'].str.split('_', expand=True)
 nanostring_long[['Patient', 'Time']] = nanostring_long['Patient_Time'].str.split('_', expand=True)
 
-# Initialize lists for residuals
-all_residuals, all_true_values = [], []
+# Initialize lists
+all_predict_values, all_true_values, all_genes, all_fold_changes, all_log2_fold_changes, selected_genes, feature_coefficients = [], [], [], [], [], {}, {}
 
 # Loop through each NanoString gene
 for gene in nanostring_long['Geneid'].unique():
@@ -47,49 +47,71 @@ for gene in nanostring_long['Geneid'].unique():
     lasso = LassoCV(cv=5, random_state=42, max_iter=5000)
     lasso.fit(X_train, y_train)
     
-    # Get selected feature indices
+    # Get selected feature indices and coefficients
     non_zero_features = np.where(lasso.coef_ != 0)[0]
+    selected_genes[gene] = list(X.columns[non_zero_features])
+    feature_coefficients[gene] = lasso.coef_[non_zero_features]
     
     if len(non_zero_features) == 0:
         # If no features are selected, predict using the mean of training labels
-        y_pred_test = np.full_like(y_test, np.mean(y_train), dtype=np.float64)
+        predicted_values = np.full_like(y_test, np.mean(y_train), dtype=np.float64)
     else:
         # Use the trained Lasso model to predict on the test set
-        y_pred_test = lasso.predict(X_test)
+        predicted_values = lasso.predict(X_test)
 
-    # Calculate residuals
-    residuals = (y_pred_test - y_test) / y_test
+    # Calculate fold change with conditional behavior within the loop
+    fold_change = np.where(
+        predicted_values >= y_test,
+        predicted_values / y_test,
+        - (y_test / predicted_values)
+    )
+    # Compute log2 fold change with pseudo-count to avoid log(0)
+    log2_fold_change = np.log2((predicted_values + 1) / (y_test + 1))
 
-    # Append residuals and true values for later plotting
-    all_residuals.extend(residuals)
+    # Add results to lists
+    all_predict_values.extend(predicted_values)
     all_true_values.extend(y_test)
+    all_genes.extend([gene] * len(y_test))  # Store the corresponding gene
+    all_fold_changes.extend(fold_change)
+    all_log2_fold_changes.extend(log2_fold_change)
 
-# Create a DataFrame from the lists
-residuals_df = pd.DataFrame({'True_Counts': all_true_values, 'Residuals': all_residuals})
+# Create DataFrame for results
+final_df = pd.DataFrame({
+    'Geneid': all_genes,
+    'True_Counts': all_true_values,
+    'Predict_Counts': all_predict_values,
+    'Fold_Change': all_fold_changes,
+    'Log2_Fold_Change': all_log2_fold_changes
+})
+
 # Save to CSV file
-residuals_df.to_csv("lasso_model_residuals.csv", index=False)
-# Load the saved residuals dataset
-residuals_df = pd.read_csv("lasso_model_residuals.csv")
+final_df.to_csv("lasso_model.csv", index=False)
+# Load the saved dataset
+final_df = pd.read_csv("lasso_model.csv")
 
-# Create a figure for Mixed Model Residual Plot
+# Plot the fold change against the true counts
 plt.figure(figsize=(8, 6))
-plt.scatter(residuals_df['True_Counts'], residuals_df['Residuals'], alpha=0.5, color="green", label="Lasso Model Performance")
-plt.axhline(1, color="red", linestyle="--", linewidth=1.5)
-plt.axhline(-1, color="red", linestyle="--", linewidth=1.5)
-plt.xscale("log")  # Set x-axis to log scale
-# plt.ylim(-10, 50)  # Set y-axis limits
-plt.xlabel("True Counts (Log Scale)")
-plt.ylabel("Fold Change: (Predicted - True) / True")
+plt.scatter(final_df['True_Counts'], final_df['Fold_Change'], alpha=0.5, color="green", label="Lasso Model Performance")
+# plt.scatter(final_df['True_Counts'], final_df['Fold_Change'], alpha=0.5, color="green", label="Gradient Boosting Model Performance")
+plt.xscale("log")
+plt.xlabel("True Counts")
+# plt.ylabel("Signed Fold Change")
+plt.ylabel("Signed Fold Change")
 plt.title("Lasso Model Performance")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.show()
 
+# Create DataFrame for selected features and coefficients
+selected_features_with_coefficients = []
+for gene, features in selected_genes.items():
+    coefficients = feature_coefficients[gene]
+    for feature, coefficient in zip(features, coefficients):
+        selected_features_with_coefficients.append([gene, feature, coefficient])
+# Convert the list to a DataFrame
+selected_features_df = pd.DataFrame(selected_features_with_coefficients, columns=['Geneid', 'Feature', 'Coefficient'])
+# Save to CSV
+selected_features_df.to_csv("selected_genes_lasso_with_coefficients.csv", index=False)
 
-# Compute acceptable range based on a twofold change
-acceptable = (residuals_df['Residuals'] >= -1) & (residuals_df['Residuals'] <= 1)
-# Calculate the percentage of predictions within the acceptable range
-acceptable_percentage = acceptable.mean() * 100  # Convert to percentage
-# Print the result
-print(f"Percentage of predicted values within a twofold change: {acceptable_percentage:.2f}%")
+

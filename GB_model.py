@@ -16,8 +16,8 @@ nanostring_long = nanostring.melt(id_vars=["Geneid"], var_name="Patient_Time", v
 rnaseq_long[['Patient', 'Time']] = rnaseq_long['Patient_Time'].str.split('_', expand=True)
 nanostring_long[['Patient', 'Time']] = nanostring_long['Patient_Time'].str.split('_', expand=True)
 
-# Initialize lists 
-all_predict_values, all_true_values, all_genes = [], [], []
+# Initialize lists
+all_predict_values, all_true_values, all_genes, all_fold_changes, all_log2_fold_changes = [], [], [], [], []
 
 # Loop through each NanoString gene
 for gene in nanostring_long['Geneid'].unique():
@@ -44,54 +44,65 @@ for gene in nanostring_long['Geneid'].unique():
     model = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)
     model.fit(X_train, y_train)
 
-    # Store predict values with true values and gene names
-    all_predict_values.extend(model.predict(X_test))
+    # Store predicted values with true values and gene names
+    predicted_values = model.predict(X_test)
+    # Calculate fold change with conditional behavior within the loop
+    fold_change = np.where(
+        predicted_values >= y_test,
+        predicted_values / y_test,
+        - (y_test / predicted_values)
+    )
+
+    # Compute log2 fold change with pseudo-count to avoid log(0)
+    log2_fold_change = np.log2((predicted_values + 1) / (y_test + 1))
+
+    # Add results to lists
+    all_predict_values.extend(predicted_values)
     all_true_values.extend(y_test)
-    all_genes.extend([gene] * len(y_test))  # Store the corresponding gene 
+    all_genes.extend([gene] * len(y_test))  # Store the corresponding gene
+    all_fold_changes.extend(fold_change)
+    all_log2_fold_changes.extend(log2_fold_change)
 
-# Create DataFrame for residuals
-df = pd.DataFrame({'Geneid': all_genes, 'True_Counts': all_true_values, 'Predict_Counts': all_predict_values})
+# Create DataFrame for results
+final_df = pd.DataFrame({
+    'Geneid': all_genes,
+    'True_Counts': all_true_values,
+    'Predict_Counts': all_predict_values,
+    'Fold_Change': all_fold_changes,
+    'Log2_Fold_Change': all_log2_fold_changes
+})
+
 # Save to CSV file
-df.to_csv("GB_model.csv", index=False)
-# Load the saved residuals dataset
-df = pd.read_csv("GB_model.csv")
-
-# Calculate fold change with conditional behavior
-df['Fold_Change'] = np.where(
-    df['Predict_Counts'] >= df['True_Counts'],
-    df['Predict_Counts'] / df['True_Counts'],
-    - (df['True_Counts'] / df['Predict_Counts'])
-)
-# Flag genes with absolute fold change greater than 10, considering both sides
-df['Bad_Gene'] = np.abs(df['Fold_Change']) > 10  # Check for absolute fold change > 10
-# Filter bad genes
-bad_genes = df[df['Bad_Gene']]
-# Save or display bad genes
-bad_genes.to_csv("bad_genes.csv", index=False)
-# Optionally, print out the bad genes
-print(bad_genes)
+final_df.to_csv("GB_model.csv", index=False)
+# Load the saved dataset
+final_df = pd.read_csv("GB_model.csv")
 
 # Plot the fold change against the true counts
 plt.figure(figsize=(8, 6))
-# plt.scatter(df['True_Counts'], df['Fold_Change'], alpha=0.5, color="green", label="Gradient Boosting Model Performance")
-plt.scatter(df['True_Counts'], np.log2(df['Fold_Change']), alpha=0.5, color="green", label="Gradient Boosting Model Performance")
-# plt.axhline(10, color="red", linestyle="--", linewidth=1.5)  # Threshold at 10-fold change (positive)
-# plt.axhline(-10, color="red", linestyle="--", linewidth=1.5)  # Threshold at -10-fold change (negative)
-# Set x-axis to log scale
+plt.scatter(final_df['True_Counts'], final_df['Log2_Fold_Change'], alpha=0.5, color="green", label="Gradient Boosting Model Performance")
+# plt.scatter(final_df['True_Counts'], final_df['Fold_Change'], alpha=0.5, color="green", label="Gradient Boosting Model Performance")
 plt.xscale("log")
 plt.xlabel("True Counts")
+# plt.ylabel("Signed Fold Change")
 plt.ylabel("Log2 Fold Change")
-# plt.ylabel("Fold Change")
 plt.title("Gradient Boosting Model Performance")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-# Show the plot
 plt.show()
 
+# # Flag genes with absolute fold change greater than 10, considering both sides
+# df['Bad_Gene'] = np.abs(df['Fold_Change']) > 10  # Check for absolute fold change > 10
+# # Filter bad genes
+# bad_genes = df[df['Bad_Gene']]
+# # Save or display bad genes
+# bad_genes.to_csv("bad_genes.csv", index=False)
+# # Optionally, print out the bad genes
+# print(bad_genes)
+
 # Compute acceptable range based on a ±10-fold change
-acceptable = np.abs(df['Fold_Change']) <= 10  # Check if fold change is within ±10 (absolute)
+# acceptable = np.abs(df['Fold_Change']) <= 10  # Check if fold change is within ±10 (absolute)
 # Calculate the percentage of predictions within the acceptable range
-acceptable_percentage = acceptable.mean() * 100  # Convert to percentage
+# acceptable_percentage = acceptable.mean() * 100  # Convert to percentage
 # Print the result
-print(f"Percentage of predicted values within a 10-fold change: {acceptable_percentage:.2f}%")
+# print(f"Percentage of predicted values within a 10-fold change: {acceptable_percentage:.2f}%")

@@ -19,8 +19,8 @@ nanostring_long = nanostring.melt(id_vars=["Geneid"], var_name="Patient_Time", v
 rnaseq_long[['Patient', 'Time']] = rnaseq_long['Patient_Time'].str.split('_', expand=True)
 nanostring_long[['Patient', 'Time']] = nanostring_long['Patient_Time'].str.split('_', expand=True)
 
-# Initialize lists for fold change
-all_residuals, all_true_values = [], []
+# Initialize lists
+all_predict_values, all_true_values, all_genes, all_fold_changes, all_log2_fold_changes = [], [], [], [], []
 
 # Loop through each NanoString gene
 for gene in nanostring_long['Geneid'].unique():
@@ -57,37 +57,48 @@ for gene in nanostring_long['Geneid'].unique():
     model = smf.mixedlm(formula, train_data, groups=train_data['Patient']).fit()
 
     # Predictions on test data
-    y_pred = model.predict(X_test_selected)  # Use test data for predictions
-    residuals = (y_pred - y_test) / y_test  # Calculate residuals on test set
-    all_residuals.extend(residuals)
+    predicted_values = model.predict(X_test_selected)  # Use test data for predictions
+    # Calculate fold change with conditional behavior within the loop
+    fold_change = np.where(
+        predicted_values >= y_test,
+        predicted_values / y_test,
+        - (y_test / predicted_values)
+    )
+
+    # Compute log2 fold change with pseudo-count to avoid log(0)
+    log2_fold_change = np.log2((predicted_values + 1) / (y_test + 1))
+
+    # Add results to lists
+    all_predict_values.extend(predicted_values)
     all_true_values.extend(y_test)
+    all_genes.extend([gene] * len(y_test))  # Store the corresponding gene
+    all_fold_changes.extend(fold_change)
+    all_log2_fold_changes.extend(log2_fold_change)
 
-# Create a DataFrame from the lists
-residuals_df = pd.DataFrame({'True_Counts': all_true_values, 'Residuals': all_residuals})
+# Create DataFrame for results
+final_df = pd.DataFrame({
+    'Geneid': all_genes,
+    'True_Counts': all_true_values,
+    'Predict_Counts': all_predict_values,
+    'Fold_Change': all_fold_changes,
+    'Log2_Fold_Change': all_log2_fold_changes
+})
+
 # Save to CSV file
-residuals_df.to_csv("mixed_model_residuals.csv", index=False)
-# Load the saved residuals dataset
-residuals_df = pd.read_csv("mixed_model_residuals.csv")
+final_df.to_csv("mixed_model.csv", index=False)
+# Load the saved dataset
+final_df = pd.read_csv("mixed_model.csv")
 
-# Create a figure for Mixed Model Residual Plot
+# Plot the fold change against the true counts
 plt.figure(figsize=(8, 6))
-plt.scatter(residuals_df['True_Counts'], residuals_df['Residuals'], alpha=0.5, color="green", label="Mixed-Effects Model Performance")
-plt.axhline(1, color="red", linestyle="--", linewidth=1.5)
-plt.axhline(-1, color="red", linestyle="--", linewidth=1.5)
-plt.xscale("log")  # Set x-axis to log scale
-# plt.ylim(-10, 50)  # Set y-axis limits
-plt.xlabel("True Counts (Log Scale)")
-plt.ylabel("Fold Change: (Predicted - True) / True")
-plt.title("Mixed-Effects Model Performance")
+plt.scatter(final_df['True_Counts'], final_df['Fold_Change'], alpha=0.5, color="green", label="Mixed Effect Model Performance")
+# plt.scatter(final_df['True_Counts'], final_df['Fold_Change'], alpha=0.5, color="green", label="Gradient Boosting Model Performance")
+plt.xscale("log")
+plt.xlabel("True Counts")
+# plt.ylabel("Signed Fold Change")
+plt.ylabel("Signed Fold Change")
+plt.title("Mixed Effect Model Performance")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.show()
-
-
-# Compute acceptable range based on a twofold change
-acceptable = (residuals_df['Residuals'] >= -1) & (residuals_df['Residuals'] <= 1)
-# Calculate the percentage of predictions within the acceptable range
-acceptable_percentage = acceptable.mean() * 100  # Convert to percentage
-# Print the result
-print(f"Percentage of predicted values within a twofold change: {acceptable_percentage:.2f}%")
